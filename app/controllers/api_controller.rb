@@ -1,3 +1,4 @@
+require 'open-uri'
 class ApiController < ApplicationController
   
   def q
@@ -7,7 +8,7 @@ class ApiController < ApplicationController
     if res.nil?
       data = case api
       when "img"
-        img(key)
+        img(key)#flicker(key).take(10)+
       when "vid"
         video(key)
       when "web"
@@ -18,8 +19,58 @@ class ApiController < ApplicationController
     render :text=>res.data
   end
   
+  def d
+    key = params[:id].downcase
+    word = params[:word].downcase
+    
+    render :json => {:res=> (find_connection(key, word) || find_connection(word, key))}
+    
+         
+  end
+  
+  
   
   private
+  
+  def find_connection(key, word)
+    res = Fatlink.find_by_key(key)
+    return nil if res.nil?
+    l = res.data.index(word)
+    return nil if l.nil? || l<0
+    pre_index = res.data[0..l].reverse.index(".")
+    post_index = res.data[l..res.data.length].index(".")
+    res.data.slice(l-pre_index +2,pre_index+post_index)
+  end
+  
+  
+  
+  #Flicker
+  #http://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=c5647de58e6114f10c468d12ca718507&text=boat&format=rest
+  #http://farm{farm-id}.staticflickr.com/{server-id}/{id}_{secret}.jpg
+  #key  b8770b0eb0ab05aa8d1d82e1c7b5a704
+  #secret a1edc2c552820429
+  
+  def flicker(word)
+    text = URI::encode(word)
+    api_key = "b8770b0eb0ab05aa8d1d82e1c7b5a704"
+    res = open("http://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=#{api_key}&text=#{text}&format=json")
+    jsn = res.read
+    jsn = jsn[14..jsn.length-2]
+    keys = ["page", "pages", "perpage", "total", "photo"]
+    photos = ActiveSupport::JSON.decode(jsn)["photos"]["photo"]
+    photos.map{|p|
+        {
+        :name=>"gimage",
+        :title=>p["title"],
+        :info=>"",
+        :thumbnail=>"http://farm#{p["farm"]}.staticflickr.com/#{p["server"]}/#{p["id"]}_#{p["secret"]}_m.jpg",
+        :src=>      "http://farm#{p["farm"]}.staticflickr.com/#{p["server"]}/#{p["id"]}_#{p["secret"]}_b.jpg",
+        :user_image=> "flicker.png"
+        }
+      }
+  end
+  
+  
   
   
   def video(word)

@@ -11,7 +11,16 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20130807121331) do
+ActiveRecord::Schema.define(version: 20130811103623) do
+
+  create_table "fatlinks", force: true do |t|
+    t.string   "key"
+    t.text     "data"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "fatlinks", ["key"], name: "index_fatlinks_on_key"
 
   create_table "slots", force: true do |t|
     t.string   "key"
