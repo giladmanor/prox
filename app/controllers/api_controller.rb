@@ -6,15 +6,22 @@ class ApiController < ApplicationController
     api = params[:api] || "web"
     res = Slot.where("key = ? and api=?", key,api).first
     if res.nil?
-      data = case api
-      when "img"
-        img(key)#flicker(key).take(10)+
-      when "vid"
-        video(key)
-      when "web"
-        web(key)
-      end
-      res = Slot.create({:key=>key, :api=>api, :data=>data.to_json})
+      begin
+        data = case api
+        when "img"
+          img(key)#flicker(key).take(10)+
+        when "vid"
+          video(key)
+        when "web"
+          web(key)
+        end
+        res = Slot.create({:key=>key, :api=>api, :data=>data.to_json})
+      rescue Exception=>e
+        logger.debug e.inspect
+        keys = key.split(" ")
+        res = Slot.find(:all,:conditions=>[keys.map{|i| " key like ?"} * " OR",keys.map{|i| "%#{i}%" }].flatten) 
+      end    
+      
     end
     render :text=>res.data
   end
